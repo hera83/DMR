@@ -36,3 +36,11 @@ DELETE {{DMR_HostAddress}}/Key/Revoke/{id}
 X-Api-Key: {{DMR_MasterKey}}
 
 ###
+
+# LogController — master key only (see services/logs/docs).
+
+### Search logs. All filters are optional and combine with AND — see services/logs/docs for the full list.
+GET {{DMR_HostAddress}}/Log/Search?levels=Warning&levels=Error&page=1&pageSize=50
+X-Api-Key: {{DMR_MasterKey}}
+
+###

@@ -19,3 +19,6 @@ appsettings.Development.json
 app_dbs/**
 app_files/downloads/**
 app_files/temp/**
+
+
+CLAUDE.md

@@ -7,12 +7,50 @@ using DMR.Services.Dmr.Interfaces;
 using DMR.Services.Identity.Authentication;
 using DMR.Services.Identity.Dtos;
 using DMR.Services.Identity.Interfaces;
+using DMR.Services.Logs.Interfaces;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// Structured logging — see services/logs/docs. MinimumLevel (and its per-category overrides) is read from
+// the "Serilog" section in appsettings.json/appsettings.Development.json, so each environment can run at a
+// different floor (e.g. Debug locally, Information in production) without a code change. The sinks
+// themselves (Console + SQLite) are wired up here in code rather than via that same config section because
+// the SQLite sink's file path/table name/rollover behaviour must always be fixed — see the comment above
+// the WriteTo.SQLite call, and the project's "fixed values aren't config fields" convention.
+var logDatabasePath = Path.Combine(builder.Environment.ContentRootPath, "app_dbs", "serilog.db");
+Directory.CreateDirectory(Path.GetDirectoryName(logDatabasePath)!);
+
+builder.Host.UseSerilog((context, services, loggerConfiguration) =>
+{
+    loggerConfiguration
+        .ReadFrom.Configuration(context.Configuration)
+        .ReadFrom.Services(services)
+        .Enrich.FromLogContext()
+        .WriteTo.Console()
+        // Fixed path/table/shape — never configurable per request or per environment, so exactly ONE
+        // database file ever exists (app_dbs/serilog.db, alongside the app's other databases). Must stay
+        // in sync with LogsService.GetDatabasePath(), which reads this same file directly to serve
+        // LogController's search endpoint.
+        //   - rollOver: false + a generous maxDatabaseSize (1 GB): the sink never creates a
+        //     "<name>-yyyyMMdd_HHmmss-<guid>.db" sibling file — there is only ever one serilog.db.
+        //   - retentionPeriod: keeps that single file from growing forever instead (old rows are pruned on
+        //     a timer), which is what actually keeps "no rollover" safe long-term.
+        //   - batchSize: 1 — flush every event immediately rather than buffering, so a log line is visible
+        //     to LogController's search immediately after it's written, not after a batch fills up.
+        .WriteTo.SQLite(
+            sqliteDbPath: logDatabasePath,
+            tableName: "Logs",
+            storeTimestampInUtc: true,
+            batchSize: 1,
+            maxDatabaseSize: 1024,
+            rollOver: false,
+            retentionPeriod: TimeSpan.FromDays(90));
+});
 
 // Add services to the container.
 
@@ -42,6 +80,7 @@ builder.Services.AddSwaggerGen(options =>
 builder.Services.Configure<FtpConnectionOptions>(builder.Configuration.GetSection("Ftp"));
 builder.Services.AddScoped<IFtpService, DMR.Services.Ftp.FtpService>();
 builder.Services.AddScoped<IDmrService, DMR.Services.Dmr.DmrService>();
+builder.Services.AddScoped<ILogsService, DMR.Services.Logs.LogsService>();
 
 // Daily DMR ingest — runs once a day at 03:00 local time; see bgServices/DmrWorker.cs. Its
 // AppIdentityDbContext/IFtpService/IDmrService dependencies are scoped, so the worker (a singleton) opens
@@ -94,6 +133,11 @@ using (var scope = app.Services.CreateScope())
 }
 
 // Configure the HTTP request pipeline.
+// Logs one structured line per request (method, path, status code, elapsed ms) into the same Console +
+// SQLite sinks as everything else — placed first so it wraps the entire pipeline below, including the "/"
+// redirect and Swagger.
+app.UseSerilogRequestLogging();
+
 // Swagger is intentionally enabled in every environment (not just Development) so the API stays
 // self-documenting in production too — see the "/" redirect below.
 app.UseSwagger();
