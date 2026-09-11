@@ -1,0 +1,17 @@
+services:
+  dmr-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: dmr-api:latest
+    restart: unless-stopped
+    env_file:
+      - .env
+    ports:
+      - "${PORT:-8080}:8080"
+    volumes:
+      # Persist the SQLite databases (identity.db + the ingested DMR dataset
+      # files) across container recreations/upgrades.
+      - ./app_dbs:/app/app_dbs
+      # Persist the FTP raw export, downloads, and scratch directories.
+      - ./app_files:/app/app_files

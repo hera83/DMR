@@ -1,0 +1,19 @@
+bin/
+obj/
+**/bin/
+**/obj/
+
+# Dot-directories (editor/tooling config, docs link, git metadata) — none of
+# this is needed inside the build context.
+.*/
+
+# Local secrets/data — never bake these into the image; they're mounted or
+# provided as env vars at runtime instead (see docker-compose.yml, .env.example).
+appsettings.Development.json
+.env
+app_dbs/
+app_files/
+
+*.md
+LICENSE.txt
+DMR.http

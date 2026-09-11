@@ -1,0 +1,38 @@
+@DMR_HostAddress = http://localhost:5135
+@DMR_MasterKey = dmr_7aQW5mKqTibXCerrOu6I5lLoZ8-KJi4LQgvAGZwnrlM
+
+### Every endpoint requires a valid API key (master key or one issued via /Key/Create) in X-Api-Key.
+
+# KeyController — master key only (see services/identity/docs). Action-routed: /Key/<Action>[/{id}].
+
+### Create a new API key. The raw key is only ever shown in this response.
+POST {{DMR_HostAddress}}/Key/Create
+Content-Type: application/json
+X-Api-Key: {{DMR_MasterKey}}
+
+{
+  "name": "example client",
+  "contactInfo": "someone@example.com",
+  "expiresAtUtc": null
+}
+
+###
+
+### List active keys (add ?includeRevoked=true to also see revoked ones).
+GET {{DMR_HostAddress}}/Key/List
+X-Api-Key: {{DMR_MasterKey}}
+
+###
+
+### Roll a key over: issues fresh secret material for it (old raw key stops working immediately) while
+### keeping its id, name, contact info, expiry and usage history. Replace {id} with a real key id.
+POST {{DMR_HostAddress}}/Key/Rollover/{id}
+X-Api-Key: {{DMR_MasterKey}}
+
+###
+
+### Revoke a key by id (replace {id} with a real key id from a create/list response).
+DELETE {{DMR_HostAddress}}/Key/Revoke/{id}
+X-Api-Key: {{DMR_MasterKey}}
+
+###
