@@ -58,6 +58,24 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
 {
+    // Environment badge shown under the title on the Swagger UI landing page, so it's obvious at a glance
+    // whether you're looking at Development or Production (or anything else ASPNETCORE_ENVIRONMENT is set
+    // to). Rendered from Markdown in the doc's Description via a shields.io badge image — green for
+    // Production, orange for Development, yellow for anything else (e.g. Staging).
+    var environmentName = builder.Environment.EnvironmentName;
+    var badgeColor = environmentName switch
+    {
+        "Production" => "brightgreen",
+        "Development" => "orange",
+        _ => "yellow"
+    };
+    options.SwaggerDoc("v1", new Microsoft.OpenApi.OpenApiInfo
+    {
+        Title = "DMR API",
+        Version = "v1",
+        Description = $"![{environmentName}](https://img.shields.io/badge/env-{Uri.EscapeDataString(environmentName)}-{badgeColor})"
+    });
+
     // Lets Swagger UI send the "X-Api-Key" header on requests, and documents it on every endpoint.
     options.AddSecurityDefinition(ApiKeyAuthenticationOptions.SchemeName, new Microsoft.OpenApi.OpenApiSecurityScheme
     {
@@ -141,7 +159,14 @@ app.UseSerilogRequestLogging();
 // Swagger is intentionally enabled in every environment (not just Development) so the API stays
 // self-documenting in production too — see the "/" redirect below.
 app.UseSwagger();
-app.UseSwaggerUI();
+app.UseSwaggerUI(options =>
+{
+    // Collapse each controller group to a single line by default (e.g. "Key") — clicking it expands the
+    // list of operations (Create, etc.) without auto-expanding their full request/response detail.
+    options.DocExpansion(Swashbuckle.AspNetCore.SwaggerUI.DocExpansion.None);
+    // -1 hides the "Schemas" section at the bottom of the page entirely; it's not meant to be browsed.
+    options.DefaultModelsExpandDepth(-1);
+});
 
 // A bare GET / has nothing to serve on its own; send visitors straight to the Swagger UI so the API
 // docs are discoverable without knowing the /swagger path up front. Plain middleware, not a mapped
