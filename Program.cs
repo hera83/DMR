@@ -4,6 +4,7 @@ using DMR.Data.Models;
 using DMR.Services.Ftp.Dtos;
 using DMR.Services.Ftp.Interfaces;
 using DMR.Services.Dmr.Interfaces;
+using DMR.Services.Health.Interfaces;
 using DMR.Services.Identity.Authentication;
 using DMR.Services.Identity.Dtos;
 using DMR.Services.Identity.Interfaces;
@@ -99,6 +100,9 @@ builder.Services.Configure<FtpConnectionOptions>(builder.Configuration.GetSectio
 builder.Services.AddScoped<IFtpService, DMR.Services.Ftp.FtpService>();
 builder.Services.AddScoped<IDmrService, DMR.Services.Dmr.DmrService>();
 builder.Services.AddScoped<ILogsService, DMR.Services.Logs.LogsService>();
+// No options to bind — see services/health/docs; the freshness thresholds are fixed constants, same as
+// DmrWorker's own window/retention constants, not per-environment configuration.
+builder.Services.AddScoped<IHealthService, DMR.Services.Health.HealthService>();
 
 // Daily DMR ingest — runs once a day at 03:00 local time; see bgServices/DmrWorker.cs. Its
 // AppIdentityDbContext/IFtpService/IDmrService dependencies are scoped, so the worker (a singleton) opens

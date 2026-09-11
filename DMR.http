@@ -1,7 +1,15 @@
 @DMR_HostAddress = http://localhost:5135
 @DMR_MasterKey = dmr_7aQW5mKqTibXCerrOu6I5lLoZ8-KJi4LQgvAGZwnrlM
 
-### Every endpoint requires a valid API key (master key or one issued via /Key/Create) in X-Api-Key.
+### Every endpoint requires a valid API key (master key or one issued via /Key/Create) in X-Api-Key —
+### except HealthController below, which is anonymous by design.
+
+# HealthController — anonymous (see services/health/docs). Keepalive + DMR data-freshness check.
+
+### Returns 200 (Healthy/Warning) or 503 (Unhealthy). No X-Api-Key needed.
+GET {{DMR_HostAddress}}/Health/Check
+
+###
 
 # KeyController — master key only (see services/identity/docs). Action-routed: /Key/<Action>[/{id}].
 
